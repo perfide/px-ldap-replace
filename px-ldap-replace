@@ -1,0 +1,391 @@
+#!/usr/bin/env python3
+
+"""LDAP regex find and replace script"""
+
+# Copyright:
+#   2019 P. H. <github.com/perfide>
+# License:
+#   BSD-2-Clause (BSD 2-Clause "Simplified" License)
+#   https://spdx.org/licenses/BSD-2-Clause.html
+
+# included
+import argparse
+import getpass
+import logging
+import os
+import re
+import sys
+import termios
+import tty
+
+# 3rd-party
+import ldap3  # pip3 install ldap3 / sudo apt-get install python3-ldap3
+import yaml  # pip3 install PyYAML / sudo apt-get install python3-yaml
+
+
+LOG = logging.getLogger('px-ldap-replace')
+LOG.setLevel(logging.DEBUG)
+LOG_HANDLER = logging.StreamHandler()
+LOG_HANDLER.setLevel(logging.DEBUG)
+LOG.addHandler(LOG_HANDLER)
+
+
+class BadNoneValue(Exception):
+    """Raise an error if an argument is None"""
+    def __init__(self, argument):
+        self.argument = argument
+
+    def __str__(self):
+        return 'argument {}: can not be None'.format(self.argument)
+# end class BadNoneValue
+
+
+def getc():
+    """Read a tingle character from stdin
+
+    Arguments:
+        None
+
+    Returns:
+        str: a single character
+
+    """
+    fd = sys.stdin.fileno()
+    old_settings = termios.tcgetattr(fd)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        ch = sys.stdin.read(1)
+    finally:
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    return ch
+# end def getc
+
+
+def force_getc(opts):
+    """Let the user chose from a list of characters
+
+    Arguments:
+        opts (iterable): allowed characters
+
+    Returns:
+        None
+
+    """
+    print('please press:', end='')
+    for key, desc in sorted(opts.items()):
+        print(' [{}] {}'.format(key, desc), end='')
+    print('')
+    while True:
+        c = getc()
+        if c == '\x03':
+            # ctrl+c
+            raise KeyboardInterrupt
+        if c in opts:
+            return c
+        print('you pressed {!r} which is not in [{}]'.format(
+            c,
+            ' '.join(opts.keys()),
+        ))
+    # never reached
+    return
+# end def force_getc
+
+
+def get_user_feedback():
+    """Get a single character from input and interprete it
+
+    Args: None
+
+    Returns:
+        tuple: Modified ask_user and do_modification variables
+
+    """
+    ask_user = True
+    do_modification = False
+    opts = {
+        'y': 'yes once',
+        'n': 'no one',
+        'a': 'yes to all',
+        'q': 'no to all',
+    }
+    c = force_getc(opts)
+    if c == 'y':
+        do_modification = True
+    if c == 'a':
+        ask_user = False
+        do_modification = True
+    if c == 'q':
+        ask_user = False
+    return (ask_user, do_modification)
+# end def get_user_feedback
+
+
+def get_entries(conn, search_base, search_filter, attributes):
+    """Search LDAP for objects
+
+    Args:
+        conn (ldap3.core.connection.Connection): a connected LDAP object
+        search_base (str): base-dn to be used for the search
+
+    Returns:
+        set: user-DNs
+
+    """
+    user_dns = set()
+    LOG.info('searching...')
+    try:
+        search_result = conn.search(
+            search_base=search_base,
+            search_filter=search_filter,
+            search_scope=ldap3.SUBTREE,
+            attributes=attributes)
+    except ldap3.core.exceptions.LDAPSocketReceiveError as e:
+        # error receiving data: The read operation timed out
+        LOG.error('search times out: {}'.format(e))
+        return []
+
+    if not search_result:
+        LOG.error('search failed')
+        return user_dns
+    LOG.info('search-results: {}'.format(len(conn.response)))
+    return conn.response
+# end def get_entries
+
+
+def read_config_file():
+    """Parse command-line arguments
+
+    Args: None
+
+    Returns:
+        dict: representing the content of the yaml file
+
+    """
+    config_path = os.path.join(
+        os.path.expanduser('~'), '.config', 'px-ldap-replace.yaml')
+    try:
+        with open(config_path) as fh:
+            cfg = yaml.safe_load(fh)
+    except FileNotFoundError:
+        LOG.warning('config not found at: {}'.format(config_path))
+        cfg = {}
+    if cfg is None:
+        LOG.warning('empty config found at: {}'.format(config_path))
+        cfg = {}
+    return cfg
+# end def read_config_file
+
+
+def build_argument_parser():
+    """Parse command-line arguments
+
+    Args: None
+
+    Returns:
+        argparse.ArgumentParser: parser object which will handle the arguments
+
+    """
+    parser = argparse.ArgumentParser(
+        description='Use a yaml-config to render Jinja2 templates')
+    parser.add_argument(
+        '-s', '--server',
+        help='servers domain name')
+    parser.add_argument(
+        '-u', '--bind_dn',
+        help='users distingushed name')
+    parser.add_argument(
+        '-p', '--bind-pw',
+        help='users password')
+    parser.add_argument(
+        '-b', '--search-base',
+        help='base-dn for searches')
+    parser.add_argument(
+        '-f', '--search-filter',
+        default='(objectclass=inetOrgPerson)',
+        help='search-filter for searches')
+    parser.add_argument(
+        '-a', '--attributes',
+        default='*',
+        help='attributes for searches')
+    parser.add_argument(
+        '-t', '--pattern',
+        help='regex to find')
+    parser.add_argument(
+        '-r', '--repl',
+        help='regex replace string')
+    return parser
+# end def build_argument_parser
+
+
+def prepare_parameters(arguments):
+    """Parse command-line arguments
+
+    Args:
+        arguments (list): command-line arguments without the programm-name
+
+    Returns:
+        dict: parsed arguments
+
+    """
+    cfg = read_config_file()
+    parser = build_argument_parser()
+    parser.set_defaults(**cfg)
+    namespace = parser.parse_args(arguments)
+
+    if namespace.server is None:
+        parser.LOG.debug_usage()
+        raise BadNoneValue('-s/--server')
+    if namespace.bind_dn is None:
+        parser.LOG.debug_usage()
+        raise BadNoneValue('-u/--bind-dn')
+    if namespace.search_base is None:
+        parser.LOG.debug_usage()
+        raise BadNoneValue('-b/--search-base')
+    if namespace.pattern is None:
+        parser.LOG.debug_usage()
+        raise BadNoneValue('-t/--pattern')
+    if namespace.repl is None:
+        parser.LOG.debug_usage()
+        raise BadNoneValue('-r/--repl')
+
+    if namespace.attributes is None:
+        namespace.attributes = ['*']
+    if isinstance(namespace.attributes, str):
+        if not namespace.attributes:
+            namespace.attributes = []
+        namespace.attributes = namespace.attributes.replace(
+            ',', ' ').replace(';', ' ').replace('  ', ' ')(.split(' ')
+    if namespace.bind_pw is None:
+        namespace.bind_pw = getpass.getpass()
+    return vars(namespace)
+# end def prepare_parameters
+
+
+def handle_attribut(conn, dn, attr, value, pattern, raw_repl,
+                    ask_user, do_modification):
+    """Handle a single attribut of an LDAP-object
+
+    Args:
+        conn (ldap3.core.connection.Connection): LDAP connection object
+        dn: (str): the objects distinguished name
+        attr (str): the attributes name
+        value (list|str): value of the attribut
+        pattern (SRE_Pattern): compiles pattern object
+        raw_repl (bytes): the replacement to be used by re.sub
+        ask_user (bool): should the user be asked?
+        do_modification (bool): execute change
+
+    Returns:
+        tuple: modified versions of ask_user and do_modification
+
+    """
+    #if isinstance(value, list):
+    replaced = []
+    for item in value:
+        result = pattern.sub(raw_repl, item)
+        replaced.append(result)
+    #else:
+    #    LOG.debug('not a list: "{}"'.format(value))
+    #    replaced = pattern.sub(raw_repl, value)
+    if value != replaced:
+        LOG.debug('dn: {}'.format(dn))
+        LOG.debug('attr: {}'.format(attr))
+        LOG.debug('old: {}'.format(value))
+        LOG.debug('new: {}'.format(replaced))
+
+        if ask_user:
+            (ask_user, do_modification) = get_user_feedback()
+
+        if do_modification:
+            change = (ldap3.MODIFY_REPLACE, replaced)
+            conn.modify(
+                dn=dn,
+                changes={attr: [change]},
+            )
+
+            if conn.result['result'] == 0:
+                LOG.info('success')
+            else:
+                LOG.info('modification failed: {} ({})'.format(
+                    conn.result['description'], conn.result['result']))
+                LOG.info(conn.result)
+
+        else:
+            LOG.info('skipping...')
+    return (ask_user, do_modification)
+# end def handle_attribut
+
+
+def main(arguments):
+    """Handle the groups cleanup
+
+    Args:
+        arguments (list): command-line arguments without the programm-name
+
+    Returns:
+        int: exit code
+
+    """
+    ask_user = True
+    do_modification = False
+    parameters = prepare_parameters(arguments)
+
+    raw_pattern = parameters['pattern'].encode('utf-8')
+    raw_repl = parameters['repl'].encode('utf-8')
+    pattern = re.compile(raw_pattern)
+
+    server = ldap3.Server(parameters['server'], get_info=ldap3.ALL)
+    conn = ldap3.Connection(
+        server,
+        user=parameters['bind_dn'],
+        password=parameters['bind_pw'],
+        auto_bind=False,
+        receive_timeout=2)
+
+    try:
+        start_tls_result = conn.start_tls()
+    except ldap3.core.exceptions.LDAPSocketOpenError as e:
+        LOG.error('failed to open socket: {}'.format(e))
+        return 1
+    except ldap3.core.exceptions.LDAPStartTLSError as e:
+        # wrap socket error: _ssl.c:835: The handshake operation timed out
+        LOG.error('failed to start TLS: {}'.format(e))
+        return 1
+    except ldap3.core.exceptions.LDAPSocketReceiveError as e:
+        # error receiving data: timed out
+        LOG.error('timeout while connecting: {}'.format(e))
+        return 1
+    assert start_tls_result is True
+    LOG.debug('start_tls succeeded')
+    bind_result = conn.bind()
+    if not bind_result:
+        LOG.error('bind failed')
+        return 2
+    LOG.debug('bind succeeded')
+    entries = get_entries(
+        conn,
+        parameters['search_base'],
+        parameters['search_filter'],
+        parameters['attributes'])
+
+    for entry in entries:
+        for (attr, value) in entry['raw_attributes'].items():
+            (ask_user, do_modification) = handle_attribut(
+                conn, entry['dn'], attr, value,
+                pattern, raw_repl,
+                ask_user, do_modification)
+
+    LOG.info('')
+    return 0
+# def end main
+
+
+if __name__ == '__main__':
+    try:
+        sys.exit(main(sys.argv[1:]))
+    except KeyboardInterrupt:
+        LOG.error('\ninterrupted by keyboard')
+    except BadNoneValue as e:
+        LOG.error("{}: error: {}".format(sys.argv[0], e))
+
+# [EOF]
