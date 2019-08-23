@@ -41,7 +41,7 @@ class BadNoneValue(Exception):
 
 
 def getc():
-    """Read a tingle character from stdin
+    """Read a single character from stdin
 
     Arguments:
         None
