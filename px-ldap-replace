@@ -334,7 +334,7 @@ def main(arguments):
     raw_repl = parameters['repl'].encode('utf-8')
     pattern = re.compile(raw_pattern)
 
-    server = ldap3.Server(parameters['server'], get_info=ldap3.ALL)
+    server = ldap3.Server(parameters['host'], get_info=ldap3.ALL)
     conn = ldap3.Connection(
         server,
         user=parameters['bind_dn'],
