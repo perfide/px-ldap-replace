@@ -59,7 +59,7 @@ Every config-parameter is optional.
 ```yaml
 ---
 # the ldap-servers domain-name or IP
-server: ldap.example.org
+host: ldap.example.org
 # where to start searches
 search_base: dc=example,dc=org
 # object-filter defaults to '(objectclass=inetOrgPerson)'
@@ -83,9 +83,9 @@ repl: Bar
 If no password is is defined it will be requested via `getpass`:
 ```bash
 px-ldap-replace \
-  --server='ldap.example.org' \
-  --search_base='dc=example,dc=org' \
-  --bind_dn='cn=my-script-user,ou=admins,dc=example,dc=org' \
+  --host='ldap.example.org' \
+  --search-base='dc=example,dc=org' \
+  --bind-dn='cn=my-script-user,ou=admins,dc=example,dc=org' \
   --pattern='bad' \
   --repl='good'
 ```
