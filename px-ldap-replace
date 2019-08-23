@@ -233,19 +233,19 @@ def prepare_parameters(arguments):
     namespace = parser.parse_args(arguments)
 
     if namespace.server is None:
-        parser.LOG.debug_usage()
-        raise BadNoneValue('-s/--server')
+        parser.print_usage()
+        raise BadNoneValue('-H/--host')
     if namespace.bind_dn is None:
-        parser.LOG.debug_usage()
-        raise BadNoneValue('-u/--bind-dn')
+        parser.print_usage()
+        raise BadNoneValue('-D/--bind-dn')
     if namespace.search_base is None:
-        parser.LOG.debug_usage()
+        parser.print_usage()
         raise BadNoneValue('-b/--search-base')
     if namespace.pattern is None:
-        parser.LOG.debug_usage()
-        raise BadNoneValue('-t/--pattern')
+        parser.print_usage()
+        raise BadNoneValue('-s/--pattern')
     if namespace.repl is None:
-        parser.LOG.debug_usage()
+        parser.print_usage()
         raise BadNoneValue('-r/--repl')
 
     if namespace.attributes is None:
