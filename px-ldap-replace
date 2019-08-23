@@ -92,7 +92,7 @@ def force_getc(opts):
 
 
 def get_user_feedback():
-    """Get a single character from input and interprete it
+    """Ask user how to proceed
 
     Args: None
 
