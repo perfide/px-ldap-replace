@@ -261,7 +261,7 @@ def prepare_parameters(arguments):
 # end def prepare_parameters
 
 
-def handle_attribut(conn, dn, attr, value, pattern, raw_repl,
+def handle_attribute(conn, dn, attr, value, pattern, raw_repl,
                     ask_user, do_modification):
     """Handle a single attribut of an LDAP-object
 
@@ -313,7 +313,7 @@ def handle_attribut(conn, dn, attr, value, pattern, raw_repl,
         else:
             LOG.info('skipping...')
     return (ask_user, do_modification)
-# end def handle_attribut
+# end def handle_attribute
 
 
 def main(arguments):
@@ -370,7 +370,7 @@ def main(arguments):
 
     for entry in entries:
         for (attr, value) in entry['raw_attributes'].items():
-            (ask_user, do_modification) = handle_attribut(
+            (ask_user, do_modification) = handle_attribute(
                 conn, entry['dn'], attr, value,
                 pattern, raw_repl,
                 ask_user, do_modification)
