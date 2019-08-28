@@ -254,7 +254,7 @@ def prepare_parameters(arguments):
         if not namespace.attributes:
             namespace.attributes = []
         namespace.attributes = namespace.attributes.replace(
-            ',', ' ').replace(';', ' ').replace('  ', ' ')(.split(' ')
+            ',', ' ').replace(';', ' ').replace('  ', ' ').split(' ')
     if namespace.bind_pw is None:
         namespace.bind_pw = getpass.getpass()
     return vars(namespace)
