@@ -261,8 +261,8 @@ def prepare_parameters(arguments):
 # end def prepare_parameters
 
 
-def handle_attribute(conn, dn, attr, value, pattern, raw_repl,
-                    ask_user, do_modification):
+def handle_attribute(
+        conn, dn, attr, value, pattern, raw_repl, ask_user, do_modification):
     """Handle a single attribut of an LDAP-object
 
     Args:
