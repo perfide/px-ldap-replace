@@ -213,6 +213,12 @@ def build_argument_parser():
     parser.add_argument(
         '-r', '--repl',
         help='regex replace string')
+    parser.add_argument(
+        '-k', '--limit-key',
+        help='key for limitting changes')
+    parser.add_argument(
+        '-v', '--limit-file',
+        help='values-file for limitting changes')
     return parser
 # end def build_argument_parser
 
