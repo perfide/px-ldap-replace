@@ -253,6 +253,9 @@ def prepare_parameters(arguments):
     if namespace.repl is None:
         parser.print_usage()
         raise BadNoneValue('-r/--repl')
+    if (namespace.limit_key is None) != (namespace.limit_file is None):
+        parser.print_usage()
+        raise BadNoneValue('-k/--limit-key & -v/--limit-file')
 
     if namespace.attributes is None:
         namespace.attributes = ['*']
