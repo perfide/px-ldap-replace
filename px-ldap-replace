@@ -383,6 +383,9 @@ def main(arguments):
         if limit_values:
             if parameters['limit_key'] not in entry['attributes']:
                 continue
+            cur_values = set(entry['attributes'][parameters['limit_key']])
+            if (cur_values - limit_values):
+                continue
         for (attr, value) in entry['raw_attributes'].items():
             (ask_user, do_modification) = handle_attribute(
                 conn, entry['dn'], attr, value,
