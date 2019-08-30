@@ -74,6 +74,10 @@ attributes: '*'
 pattern: Foo
 # regex replacement string
 repl: Bar
+# the attribute name to check against the limit-file
+limit_key: mail
+# file-path to a value whitelist (newline separated)
+limit_file: mails.txt
 ...
 
 ```
@@ -87,5 +91,13 @@ px-ldap-replace \
   --search-base='dc=example,dc=org' \
   --bind-dn='cn=my-script-user,ou=admins,dc=example,dc=org' \
   --pattern='bad' \
-  --repl='good'
+  --repl='good' \
+  --limit-key='mail' \
+  --limit-file='mails.txt'
+```
+
+With mails.txt looking like:
+```
+user1@example.com
+user2@example.com
 ```
