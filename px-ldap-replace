@@ -279,14 +279,10 @@ def handle_attribute(
         tuple: modified versions of ask_user and do_modification
 
     """
-    #if isinstance(value, list):
     replaced = []
     for item in value:
         result = pattern.sub(raw_repl, item)
         replaced.append(result)
-    #else:
-    #    LOG.debug('not a list: "{}"'.format(value))
-    #    replaced = pattern.sub(raw_repl, value)
     if value != replaced:
         LOG.debug('dn: {}'.format(dn))
         LOG.debug('attr: {}'.format(attr))
