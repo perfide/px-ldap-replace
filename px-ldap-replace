@@ -223,21 +223,18 @@ def build_argument_parser():
 # end def build_argument_parser
 
 
-def prepare_parameters(arguments):
-    """Parse command-line arguments
+def validate_parameters(namespace, parser):
+    """Validate the config-enhanced namespace
 
     Args:
-        arguments (list): command-line arguments without the programm-name
+        namespace (argparse.Namespace): the result of parse_args()
 
-    Returns:
-        dict: parsed arguments
+    Raises:
+        BadNoneValue: If a required argument is not set
+
+    Returns: None
 
     """
-    cfg = read_config_file()
-    parser = build_argument_parser()
-    parser.set_defaults(**cfg)
-    namespace = parser.parse_args(arguments)
-
     if namespace.host is None:
         parser.print_usage()
         raise BadNoneValue('-H/--host')
@@ -256,6 +253,26 @@ def prepare_parameters(arguments):
     if (namespace.limit_key is None) != (namespace.limit_file is None):
         parser.print_usage()
         raise BadNoneValue('-k/--limit-key & -v/--limit-file')
+    return
+# end def validate_parameters
+
+
+def prepare_parameters(arguments):
+    """Parse command-line arguments
+
+    Args:
+        arguments (list): command-line arguments without the programm-name
+
+    Returns:
+        dict: parsed arguments
+
+    """
+    cfg = read_config_file()
+    parser = build_argument_parser()
+    parser.set_defaults(**cfg)
+    namespace = parser.parse_args(arguments)
+
+    validate_parameters(namespace, parser)
 
     if namespace.attributes is None:
         namespace.attributes = ['*']
