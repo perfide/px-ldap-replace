@@ -339,6 +339,12 @@ def main(arguments):
     raw_repl = parameters['repl'].encode('utf-8')
     pattern = re.compile(raw_pattern)
 
+    limit_values = set()
+    if (parameters['limit_file'] is not None):
+        with open(parameters['limit_file']) as fh:
+            for line in fh.readlines():
+                limit_values.add(line.rstrip())
+
     server = ldap3.Server(parameters['host'], get_info=ldap3.ALL)
     conn = ldap3.Connection(
         server,
