@@ -4,7 +4,7 @@ WORKDIR /opt/px-ldap-replace
 
 COPY * ./
 
-RUN pip install -r requirements.txt && \
+RUN pip install --requirement=requirements.txt && \
     python setup.py install
 
 ENTRYPOINT ["px-ldap-replace"]
