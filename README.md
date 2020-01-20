@@ -54,7 +54,7 @@ python setup.py install
 
 Build docker image
 ```bash
-docker build -t px-ldap-replace .
+docker build --tag=px-ldap-replace .
 ```
 
 Prepare config files
