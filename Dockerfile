@@ -2,7 +2,7 @@ FROM python:alpine
 
 WORKDIR /opt/px-ldap-replace
 
-COPY * ./
+COPY . .
 
 RUN pip install --requirement=requirements.txt && \
     python setup.py install
