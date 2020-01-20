@@ -66,7 +66,7 @@ vim .config/mails.txt
 
 Run docker container
 ```bash
-docker run -v "$(pwd)/.config/:/root/.config/" px-ldap-replace
+docker run --volume="$(pwd)/.config/:/root/.config/" px-ldap-replace
 ```
 
 
