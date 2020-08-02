@@ -281,6 +281,9 @@ def prepare_parameters(arguments):
             namespace.attributes = []
         namespace.attributes = namespace.attributes.replace(
             ',', ' ').replace(';', ' ').replace('  ', ' ').split(' ')
+        if (namespace.limit_key is not None and
+                namespace.limit_key) not in namespace.attributes):
+            namespace.attributes.append(namespace.limit_key)
     if namespace.bind_pw is None:
         namespace.bind_pw = getpass.getpass()
     return vars(namespace)
