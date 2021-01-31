@@ -50,6 +50,26 @@ python setup.py install
 ```
 
 
+## Docker
+
+Build docker image
+```bash
+docker build --tag=px-ldap-replace .
+```
+
+Prepare config files
+```bash
+mkdir .config
+vim .config/px-ldap-replace.yaml
+vim .config/mails.txt
+```
+
+Run docker container
+```sh
+docker run --volume="$(pwd)/.config/:/root/.config/" px-ldap-replace
+```
+
+
 ## Configuration
 
 All parameters set via command-line can also be set in the config.
