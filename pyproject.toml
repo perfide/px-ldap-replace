@@ -1,0 +1,29 @@
+[project]
+name = "px-ldap-replace"
+version = "0.1.0"
+description = "Implements a simple Reg-ex replace for LDAP"
+authors = [
+    {name = "perfide", email = "perfide+github@zaubberer.net"},
+]
+license = {text = "BSD-2-Clause"}
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "ldap3 (>=2.6)",
+    "pyyaml (>=5.4)",
+]
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"
+
+[tool.pdm]
+distribution = true
+
+[[tool.pdm.source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dependency-groups]
+dev = []
